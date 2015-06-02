@@ -4,7 +4,7 @@ CXX = g++
 CPPFLAGS = -g \
 		   -I/usr/local/include
 
-LDFLAGS = -L/usr/local/lib -lprotobuf 
+LDFLAGS = -L/usr/local/lib -lprotobuf -luuid
 PROROC = protoc
 
 SRC_DIR = ./src
