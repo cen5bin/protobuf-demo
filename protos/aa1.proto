@@ -1,3 +1,0 @@
-message person{
-	required string name = 1;
-}

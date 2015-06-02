@@ -1,4 +1,4 @@
-TARGET = run 
+TARGET = run.out
 
 CXX = g++
 CPPFLAGS = -g
@@ -13,6 +13,7 @@ EXT = cpp cc   #extensions of source file
 SOURCE = $(foreach d, $(EXT), $(notdir $(wildcard $(SRC_DIR)/*.$(d)))) 
 OBJS = $(foreach src, $(basename $(SOURCE)), $(OBJ_DIR)/$(src).o)
 PROTO_DIR = ./protos
+
 
 edit: $(TARGET)
 
@@ -37,6 +38,10 @@ $(OBJ_DIR)/%.d : $(SRC_DIR)/%.cc
 .PHONY: clean all
 clean:
 	rm -rf $(OBJS) $(OBJ_DIR)/*.d run
+
+cleanall:
+	make clean
+	rm -f $(SRC_DIR)/*.pb.*
 
 all:
 	$(PROROC) -I=$(PROTO_DIR) --cpp_out=$(SRC_DIR) $(PROTO_DIR)/*.proto	
