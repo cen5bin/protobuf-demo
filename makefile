@@ -1,7 +1,10 @@
 TARGET = run.out
 
 CXX = g++
-CPPFLAGS = -g
+CPPFLAGS = -g \
+		   -I/usr/local/include/google/protobuf/io \
+		   -I/usr/local/include/google/protobuf/ 
+
 LDFLAGS = -L/usr/local/lib -lprotobuf 
 PROROC = protoc
 
@@ -17,7 +20,7 @@ PROTO_DIR = ./protos
 
 edit: $(TARGET)
 
-run: $(OBJS)
+$(TARGET): $(OBJS)
 	$(CXX) $^ $(LDFLAGS) -o $@
 	@echo "done"
 

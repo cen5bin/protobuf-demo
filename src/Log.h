@@ -47,3 +47,6 @@
 #define _I(fmt, args...) info(fmt, ##args)
 #define _W(fmt, args...) warn(fmt, ##args)
 #define _E(fmt, args...) err(fmt, ##args)
+
+#define _F_IN_() debug("in")
+#define _F_OUT_() debug("out")
