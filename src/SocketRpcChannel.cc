@@ -1,10 +1,10 @@
-#include "RpcChannel.h"
+#include "SocketRpcChannel.h"
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
 #include <string>
 
-#include "coded_stream.h"
+#include "google/protobuf/io/coded_stream.h"
 
 #define LOG
 #include "Log.h"
@@ -21,12 +21,12 @@ static const int8_t RPC_PROTOCOL_BUFFER = 0x02;
 static const char *HDFS_PROTOCOL = "org.apache.hadoop.hdfs.protocol.ClientProtocol";
 
 
-RpcChannel::~RpcChannel()
+SocketRpcChannel::~SocketRpcChannel()
 {
 	close(m_sockfd);
 }
 
-RpcChannel::RpcChannel(const char *ip, const unsigned short port) 
+SocketRpcChannel::SocketRpcChannel(const char *ip, const unsigned short port) 
 {
 	m_callId = -3;
 	m_sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -52,34 +52,39 @@ RpcChannel::RpcChannel(const char *ip, const unsigned short port)
 	}
 }
 
-int RpcChannel::sendMessage(const void *msg, int msg_len) const
+void SocketRpcChannel::CallMethod(const MethodDescriptor* method, RpcController* controller, const Message *request, Message *response, Closure *done)
+{
+
+}
+
+int SocketRpcChannel::sendMessage(const void *msg, int msg_len) const
 {
 	return send(m_sockfd, msg, msg_len, 0);
 }
 
-int RpcChannel::sendMessage(const char *msg) const
+int SocketRpcChannel::sendMessage(const char *msg) const
 {
 	return send(m_sockfd, (void *)msg, strlen(msg), 0);
 }
 
-int RpcChannel::sendMessage(const int8_t &msg) const
+int SocketRpcChannel::sendMessage(const int8_t &msg) const
 {
 	_D("sendMessage int8_t");
 	return send(m_sockfd, (void *)&msg, sizeof(int8_t), 0);
 }
 
-int RpcChannel::sendMessage(const int32_t &msg) const
+int SocketRpcChannel::sendMessage(const int32_t &msg) const
 {
 	_D("sendMessage int32_t");
 	return send(m_sockfd, (void *)&msg, sizeof(int32_t), 0);
 }
 
-int RpcChannel::receiveMessage(void *buf, int buf_size)
+int SocketRpcChannel::receiveMessage(void *buf, int buf_size)
 {
 	return recv(m_sockfd, buf, buf_size, 0);
 }
 
-int RpcChannel::sendMessageWidthLength(const void *msg, int msg_len) const 
+int SocketRpcChannel::sendMessageWidthLength(const void *msg, int msg_len) const 
 {
 	static uint8_t buf[10];
 	_F_IN_();
@@ -92,7 +97,7 @@ int RpcChannel::sendMessageWidthLength(const void *msg, int msg_len) const
 	return ret;
 }
 
-inline int RpcChannel::sendProtobufMessage(const Message *msg) const 
+inline int SocketRpcChannel::sendProtobufMessage(const Message *msg) const 
 {
 	static string buf;
 	msg->SerializeToString(&buf);
@@ -100,7 +105,7 @@ inline int RpcChannel::sendProtobufMessage(const Message *msg) const
 	return send(m_sockfd, (void *)buf.c_str(), buf.length(), 0);
 }
 
-int RpcChannel::sendProtobufMessageWithLength(const Message *msg) const
+int SocketRpcChannel::sendProtobufMessageWithLength(const Message *msg) const
 {
 	static uint8_t buf[10];
 	int msg_len = msg->ByteSize();
@@ -111,7 +116,7 @@ int RpcChannel::sendProtobufMessageWithLength(const Message *msg) const
 	return ret + this->sendProtobufMessage(msg);
 }
 
-RpcRequestHeaderProto *RpcChannel::createRpcRequestHeader()
+RpcRequestHeaderProto *SocketRpcChannel::createRpcRequestHeader()
 {
 	static RpcRequestHeaderProto request_header = RpcRequestHeaderProto();
 	request_header.set_rpckind((RpcKindProto)2);
@@ -126,7 +131,7 @@ RpcRequestHeaderProto *RpcChannel::createRpcRequestHeader()
 	return &request_header;
 }
 
-IpcConnectionContextProto *RpcChannel::createIpcConnectionContext()
+IpcConnectionContextProto *SocketRpcChannel::createIpcConnectionContext()
 {
 	static IpcConnectionContextProto context = IpcConnectionContextProto();
 	context.set_protocol(HDFS_PROTOCOL);	
@@ -136,7 +141,7 @@ IpcConnectionContextProto *RpcChannel::createIpcConnectionContext()
 	return &context;
 }
 
-void RpcChannel::getConnection()
+void SocketRpcChannel::getConnection()
 {
 	this->sendMessage(RPC_HEADER);
 	this->sendMessage(VERSON);
@@ -158,12 +163,12 @@ void RpcChannel::getConnection()
 
 int main()
 {
-	RpcChannel channel("127.0.0.1", 9000);
-//	printf("%d\n", channel.sendMessage((void *)"asd^]", 5));
-	//printf("%d\n", channel.sendMessage((void *)"asd", 3));
+	SocketRpcChannel SocketRpcChannel("127.0.0.1", 9000);
+//	printf("%d\n", SocketRpcChannel.sendMessage((void *)"asd^]", 5));
+	//printf("%d\n", SocketRpcChannel.sendMessage((void *)"asd", 3));
 //	char buf[1024];
-//	int ret = channel.receiveMessage((void *)buf, 1024);
+//	int ret = SocketRpcChannel.receiveMessage((void *)buf, 1024);
 //	printf("%d\n", ret);
-	channel.getConnection();
+	SocketRpcChannel.getConnection();
 	return 0;
 }

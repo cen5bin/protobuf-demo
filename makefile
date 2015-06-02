@@ -2,8 +2,7 @@ TARGET = run.out
 
 CXX = g++
 CPPFLAGS = -g \
-		   -I/usr/local/include/google/protobuf/io \
-		   -I/usr/local/include/google/protobuf/ 
+		   -I/usr/local/include
 
 LDFLAGS = -L/usr/local/lib -lprotobuf 
 PROROC = protoc
