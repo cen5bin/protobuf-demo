@@ -22,7 +22,6 @@ class SocketRpcChannel : public RpcChannel
         SocketRpcChannel(const char *ip, const uint16_t port);
 		
 		void getConnection();
-		//void send_rpc_message()
 		
 		virtual void CallMethod(const MethodDescriptor* method, RpcController* controller, const Message *request, Message *response, Closure *done);
 
@@ -43,6 +42,10 @@ class SocketRpcChannel : public RpcChannel
 
 		int sendRpcMessage(const char *method, const Message *request);
 
-        int receiveMessage(void *buf, int buf_size);
+        inline int receiveMessage(void *buf, int buf_size);
+        inline int receiveMessage(uint8_t *buf, int buf_size);
+		void receiveRpcResponse(Message *response);
+		void parseRpcResponse(Message *response, const uint8_t *buf, const uint32_t len);
+		inline const uint8_t *readVarint32FromArray(const uint8_t *buf, uint32_t *value);
 
 };

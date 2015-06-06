@@ -1,14 +1,25 @@
 #include "SocketRpcChannel.h"
 #include "ClientNamenodeProtocol.pb.h"
+#include "hdfs.pb.h"
 #include <cstdio>
 #define LOG
 #include "Log.h"
-
+#include "RpcClient.h"
 #include <uuid/uuid.h>
 using namespace hadoop::hdfs;
+using namespace native::libhdfs;
 
 int main()
 {
+
+	RpcClient client("127.0.0.1", 9000);
+	GetListingResponseProto rep;
+	client.ls("/", &rep);
+	DeleteResponseProto rr;
+	client.rm("/asd11", &rr);
+	RenameResponseProto rr1;
+	client.mv("/asd1", "/asd11", &rr1);
+	return 0;
 
 	uuid_t uuid;
 	uuid_generate_random ( uuid );
@@ -33,12 +44,15 @@ int main()
 
 
 	GetListingRequestProto req;
-	GetListingResponseProto rep;
 	req.set_src("/");
 	req.set_startafter("");
 	req.set_needlocation(false);
 
-//	stub.getListing(NULL, &req, &rep, NULL);
-	stub.delete1(NULL, &request1, &response1, NULL);
+	stub.getListing(NULL, &req, &rep, NULL);
+	DirectoryListingProto dirlist = rep.dirlist();
+	_D("%d", dirlist.remainingentries());
+	_D("%d", dirlist.partiallisting_size());
+	//_D()
+//	stub.delete1(NULL, &request1, &response1, NULL);
 	return 0;
 }

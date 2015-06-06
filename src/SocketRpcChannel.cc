@@ -6,8 +6,10 @@
 #include <uuid/uuid.h>
 
 #include "google/protobuf/io/coded_stream.h"
+#include "google/protobuf/io/zero_copy_stream.h"
+#include "google/protobuf/io/zero_copy_stream_impl.h"
 
-#define LOG
+#define INFO
 #include "Log.h"
 
 using std::string;
@@ -18,9 +20,8 @@ static const int8_t VERSON = 9;
 static const int8_t RPC_SERVICE_CLASS = 0x00;
 static const int8_t AUTH_PROTOCOL_NONE = 0x00;
 //static const int8_t RPC_PROTOCOL_BUFFER = 0x02;
-
 static const char *HDFS_PROTOCOL = "org.apache.hadoop.hdfs.protocol.ClientProtocol";
-
+static const int32_t BUFFER_SIZE = 1024;
 
 SocketRpcChannel::~SocketRpcChannel()
 {
@@ -60,19 +61,53 @@ SocketRpcChannel::SocketRpcChannel(const char *ip, const unsigned short port)
 void SocketRpcChannel::CallMethod(const MethodDescriptor* method, RpcController* controller, const Message *request, Message *response, Closure *done)
 {
 	_F_IN_();
-	_D("%s", method->full_name().c_str());
 	//this->sendRpcMessage(method->full_name().c_str(), request);
-	//this->getConnection();
 	this->sendRpcMessage(method->name().c_str(), request);
-	//this->sendRpcMessage(method->name().c_str(), request);
-	//this->sendRpcMessage(method->name().c_str(), request);
-	//this->sendRpcMessage(method->name().c_str(), request);
-	//this->sendRpcMessage(method->name().c_str(), request);
-	//_D("%d", ret);
 	char *buf[1024];
-	int ret = this->receiveMessage((void *)buf, 1024);
-	_D("%d", ret);
+	this->receiveRpcResponse(response);
+	//int ret = this->receiveMessage((void *)buf, 1024);
+//	_D("%d", ret);
 	_F_OUT_();
+}
+
+void SocketRpcChannel::receiveRpcResponse(Message *response)
+{
+	//ZeroCopyInputStream *raw_input = new FileInputStream(m_sockfd);
+	//CodedInputStream *coded_input = new CodedInputStream(raw_input);
+	//uint32_t len;
+	//coded_input->ReadLittleEndian32(&len);
+	//_D("%d", ntohl(len));
+	static uint8_t buf[BUFFER_SIZE];
+	int32_t len; //response的总长度
+	this->receiveMessage((void *)&len, sizeof(int32_t));
+	len = htonl(len);
+	RpcResponseHeaderProto header;
+	_I("received response len:%d", len);
+	int32_t tol_len = 0; //当前读到的字符数
+	while (tol_len < len)
+	{
+		int32_t read_len = this->receiveMessage(buf + tol_len, BUFFER_SIZE);
+		tol_len += read_len;
+	}
+
+	this->parseRpcResponse(response, buf, tol_len);
+	_D("response received, tol len = %d", tol_len);
+}
+
+void SocketRpcChannel::parseRpcResponse(Message *response, const uint8_t *buf, const uint32_t len)
+{
+	uint32_t rpc_header_len;
+	const uint8_t *ptr = this->readVarint32FromArray(buf, &rpc_header_len);
+	_D("%u", rpc_header_len);
+	_D("%d", ptr - buf);
+	RpcResponseHeaderProto rpc_header;
+	rpc_header.ParseFromArray(ptr, rpc_header_len);
+	_D("%d", rpc_header.status());
+	uint32_t response_len;
+	const uint8_t *ptr1 = this->readVarint32FromArray(ptr + rpc_header_len, &response_len);
+	_D("%u", response_len);
+	_D("%u", ptr1 - ptr - rpc_header_len);
+	response->ParseFromArray(ptr1, response_len);
 }
 
 int SocketRpcChannel::sendMessage(const void *msg, int msg_len) const
@@ -99,10 +134,14 @@ int SocketRpcChannel::sendMessage(const int32_t msg) const
 	return send(m_sockfd, (void *)&msg, sizeof(int32_t), 0);
 }
 
-int SocketRpcChannel::receiveMessage(void *buf, int buf_size)
+inline int SocketRpcChannel::receiveMessage(void *buf, int buf_size)
 {
-	_D("%d", m_sockfd);
 	return recv(m_sockfd, buf, buf_size, 0);
+}
+
+inline int SocketRpcChannel::receiveMessage(uint8_t *buf, int buf_size)
+{
+	return recv(m_sockfd, (void *)buf, buf_size, 0);
 }
 
 inline int SocketRpcChannel::sendProtobufMessage(const Message *msg) const 
@@ -204,3 +243,27 @@ int SocketRpcChannel::sendRpcMessage(const char *method, const Message *request)
 	this->sendProtobufMessageWithLength(request);
 }
 
+//从数组获得一个varint
+inline const uint8_t* SocketRpcChannel::readVarint32FromArray(const uint8_t* buffer, uint32_t* value) {
+	static const int kMaxVarintBytes = 10;
+	static const int kMaxVarint32Bytes = 5;
+	const uint8* ptr = buffer;
+	uint32 b;
+	uint32 result;
+
+	b = *(ptr++); result = (b&0x7F); if(!(b&0x80)) goto done;
+	b = *(ptr++); result|=(b&0x7F)<<7; if(!(b&0x80)) goto done;
+	b = *(ptr++); result|=(b&0x7F)<<14; if(!(b&0x80)) goto done;
+	b = *(ptr++); result|=(b&0x7F)<<21; if(!(b&0x80)) goto done;
+	b = *(ptr++); result |=  b<<28; if (!(b & 0x80)) goto done;
+	// If the input is larger than 32 bits, we still need to read it all
+	// and discard the high-order bits.
+	for (int i = 0; i < kMaxVarintBytes - kMaxVarint32Bytes; i++) 
+	{
+		b = *(ptr++); if (!(b & 0x80)) goto done;
+	}
+	return NULL;
+done:
+	*value = result;
+	return ptr;
+}
