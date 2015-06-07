@@ -36,3 +36,13 @@ int SocketChannel::sendMessage(const int32_t msg) const
 	//for (int i = 0; i < 4; ++i, tmp/=256) printf("%2x ", tmp % 256);
 	return send(m_sockfd, (void *)&msg, sizeof(int32_t), 0);
 }
+
+int SocketChannel::receiveMessage(void *buf, int buf_size)
+{
+	return recv(m_sockfd, buf, buf_size, 0);
+}
+
+int SocketChannel::receiveMessage(uint8_t *buf, int buf_size)
+{
+	return recv(m_sockfd, (void *)buf, buf_size, 0);
+}

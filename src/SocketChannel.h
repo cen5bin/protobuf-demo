@@ -18,6 +18,8 @@ namespace native
 				int sendMessage(const int8_t &msg) const;
 				int sendMessage(const int32_t msg) const;
 				int m_sockfd;
+				int receiveMessage(void *buf, int buf_size);
+				int receiveMessage(uint8_t *buf, int buf_size);
 
 		};
 

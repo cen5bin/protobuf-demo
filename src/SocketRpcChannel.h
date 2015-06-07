@@ -6,15 +6,17 @@
 #include "google/protobuf/message.h"
 #include "google/protobuf/service.h"
 #include "ProtobufRpcEngine.pb.h"
+#include "SocketChannel.h"
 
 using namespace hadoop::common;
 using namespace google::protobuf;
+
 
 namespace native
 {
 	namespace libhdfs
 	{
-		class SocketRpcChannel : public RpcChannel
+		class SocketRpcChannel : public RpcChannel, public SocketChannel
 		{
 			public:
 				SocketRpcChannel(){}
@@ -28,11 +30,11 @@ namespace native
 			private:
 				int m_callId;
 				char m_clientId[37];
-				int sendMessage(const void *msg, int msg_len) const;
-				int sendMessage(const char *msg) const;
-				int sendMessage(const int8_t &msg) const;
-				int sendMessage(const int32_t msg) const;
-				int m_sockfd;
+				//int sendMessage(const void *msg, int msg_len) const;
+				//int sendMessage(const char *msg) const;
+				//int sendMessage(const int8_t &msg) const;
+				//int sendMessage(const int32_t msg) const;
+				//int m_sockfd;
 				RpcRequestHeaderProto *createRpcRequestHeader();
 				IpcConnectionContextProto *createIpcConnectionContext();
 				RequestHeaderProto *createRequestHeader(const char *method);
@@ -43,8 +45,8 @@ namespace native
 
 				int sendRpcMessage(const char *method, const Message *request);
 
-				inline int receiveMessage(void *buf, int buf_size);
-				inline int receiveMessage(uint8_t *buf, int buf_size);
+//				inline int receiveMessage(void *buf, int buf_size);
+//				inline int receiveMessage(uint8_t *buf, int buf_size);
 				int receiveRpcResponse(Message *response);
 				void parseRpcResponse(Message *response, const uint8_t *buf, const uint32_t len);
 				inline const uint8_t *readVarint32FromArray(const uint8_t *buf, uint32_t *value);

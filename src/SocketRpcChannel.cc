@@ -61,30 +61,6 @@ SocketRpcChannel::SocketRpcChannel(const char *ip, const unsigned short port)
 	}
 }
 
-int SocketRpcChannel::sendMessage(const void *msg, int msg_len) const
-{
-	return send(m_sockfd, msg, msg_len, 0);
-}
-
-int SocketRpcChannel::sendMessage(const char *msg) const
-{
-	return send(m_sockfd, (void *)msg, strlen(msg), 0);
-}
-
-int SocketRpcChannel::sendMessage(const int8_t &msg) const
-{
-	_D("sendMessage int8_t");
-	return send(m_sockfd, (void *)&msg, sizeof(int8_t), 0);
-}
-
-int SocketRpcChannel::sendMessage(const int32_t msg) const
-{
-	_D("sendMessage int32_t");
-	//int32_t tmp = htons(88);
-	//for (int i = 0; i < 4; ++i, tmp/=256) printf("%2x ", tmp % 256);
-	return send(m_sockfd, (void *)&msg, sizeof(int32_t), 0);
-}
-
 void SocketRpcChannel::CallMethod(const MethodDescriptor* method, google::protobuf::RpcController* controller, const Message *request, Message *response, Closure *done)
 {
 	_F_IN_();
@@ -133,17 +109,6 @@ void SocketRpcChannel::parseRpcResponse(Message *response, const uint8_t *buf, c
 	_D("%u", ptr1 - ptr - rpc_header_len);
 	//if (response_len)
 	response->ParseFromArray(ptr1, response_len);
-}
-
-
-inline int SocketRpcChannel::receiveMessage(void *buf, int buf_size)
-{
-	return recv(m_sockfd, buf, buf_size, 0);
-}
-
-inline int SocketRpcChannel::receiveMessage(uint8_t *buf, int buf_size)
-{
-	return recv(m_sockfd, (void *)buf, buf_size, 0);
 }
 
 inline int SocketRpcChannel::sendProtobufMessage(const Message *msg) const 
