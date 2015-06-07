@@ -4,16 +4,19 @@
 #include <cstdlib>
 #include <string>
 #include <uuid/uuid.h>
+#include "RpcController.h"
 
 #include "google/protobuf/io/coded_stream.h"
 #include "google/protobuf/io/zero_copy_stream.h"
 #include "google/protobuf/io/zero_copy_stream_impl.h"
 
-#define INFO
+//#define INFO
+#define DEBUG
 #include "Log.h"
 
 using std::string;
 using namespace google::protobuf::io;
+using namespace native::libhdfs;
 
 static const char *RPC_HEADER = "hrpc";
 static const int8_t VERSON = 9;
@@ -58,58 +61,6 @@ SocketRpcChannel::SocketRpcChannel(const char *ip, const unsigned short port)
 	}
 }
 
-void SocketRpcChannel::CallMethod(const MethodDescriptor* method, RpcController* controller, const Message *request, Message *response, Closure *done)
-{
-	_F_IN_();
-	//this->sendRpcMessage(method->full_name().c_str(), request);
-	this->sendRpcMessage(method->name().c_str(), request);
-	char *buf[1024];
-	this->receiveRpcResponse(response);
-	//int ret = this->receiveMessage((void *)buf, 1024);
-//	_D("%d", ret);
-	_F_OUT_();
-}
-
-void SocketRpcChannel::receiveRpcResponse(Message *response)
-{
-	//ZeroCopyInputStream *raw_input = new FileInputStream(m_sockfd);
-	//CodedInputStream *coded_input = new CodedInputStream(raw_input);
-	//uint32_t len;
-	//coded_input->ReadLittleEndian32(&len);
-	//_D("%d", ntohl(len));
-	static uint8_t buf[BUFFER_SIZE];
-	int32_t len; //response的总长度
-	this->receiveMessage((void *)&len, sizeof(int32_t));
-	len = htonl(len);
-	RpcResponseHeaderProto header;
-	_I("received response len:%d", len);
-	int32_t tol_len = 0; //当前读到的字符数
-	while (tol_len < len)
-	{
-		int32_t read_len = this->receiveMessage(buf + tol_len, BUFFER_SIZE);
-		tol_len += read_len;
-	}
-
-	this->parseRpcResponse(response, buf, tol_len);
-	_D("response received, tol len = %d", tol_len);
-}
-
-void SocketRpcChannel::parseRpcResponse(Message *response, const uint8_t *buf, const uint32_t len)
-{
-	uint32_t rpc_header_len;
-	const uint8_t *ptr = this->readVarint32FromArray(buf, &rpc_header_len);
-	_D("%u", rpc_header_len);
-	_D("%d", ptr - buf);
-	RpcResponseHeaderProto rpc_header;
-	rpc_header.ParseFromArray(ptr, rpc_header_len);
-	_D("%d", rpc_header.status());
-	uint32_t response_len;
-	const uint8_t *ptr1 = this->readVarint32FromArray(ptr + rpc_header_len, &response_len);
-	_D("%u", response_len);
-	_D("%u", ptr1 - ptr - rpc_header_len);
-	response->ParseFromArray(ptr1, response_len);
-}
-
 int SocketRpcChannel::sendMessage(const void *msg, int msg_len) const
 {
 	return send(m_sockfd, msg, msg_len, 0);
@@ -133,6 +84,57 @@ int SocketRpcChannel::sendMessage(const int32_t msg) const
 	//for (int i = 0; i < 4; ++i, tmp/=256) printf("%2x ", tmp % 256);
 	return send(m_sockfd, (void *)&msg, sizeof(int32_t), 0);
 }
+
+void SocketRpcChannel::CallMethod(const MethodDescriptor* method, google::protobuf::RpcController* controller, const Message *request, Message *response, Closure *done)
+{
+	_F_IN_();
+	this->sendRpcMessage(method->name().c_str(), request);
+	char *buf[1024];
+	native::libhdfs::RpcController *con = (native::libhdfs::RpcController *)controller;	
+	int status = this->receiveRpcResponse(response);
+	con->set_status(status);
+	_F_OUT_();
+}
+
+int SocketRpcChannel::receiveRpcResponse(Message *response)
+{
+	static uint8_t buf[BUFFER_SIZE];
+	int32_t len; //response的总长度
+	this->receiveMessage((void *)&len, sizeof(int32_t));
+	len = htonl(len);
+	RpcResponseHeaderProto header;
+	_I("received response len:%d", len);
+	if (header.status() == 0) _I("rpc success");
+	else _I("rpc failed");
+	int32_t tol_len = 0; //当前读到的字符数
+	while (tol_len < len)
+	{
+		int32_t read_len = this->receiveMessage(buf + tol_len, BUFFER_SIZE);
+		tol_len += read_len;
+	}
+
+	this->parseRpcResponse(response, buf, tol_len);
+	_D("response received, tol len = %d", tol_len);
+	return header.status();
+}
+
+void SocketRpcChannel::parseRpcResponse(Message *response, const uint8_t *buf, const uint32_t len)
+{
+	uint32_t rpc_header_len;
+	const uint8_t *ptr = this->readVarint32FromArray(buf, &rpc_header_len);
+	_D("%u", rpc_header_len);
+	_D("%d", ptr - buf);
+	RpcResponseHeaderProto rpc_header;
+	rpc_header.ParseFromArray(ptr, rpc_header_len);
+	_D("%d", rpc_header.status());
+	uint32_t response_len;
+	const uint8_t *ptr1 = this->readVarint32FromArray(ptr + rpc_header_len, &response_len);
+	_I("%u", response_len);
+	_D("%u", ptr1 - ptr - rpc_header_len);
+	//if (response_len)
+	response->ParseFromArray(ptr1, response_len);
+}
+
 
 inline int SocketRpcChannel::receiveMessage(void *buf, int buf_size)
 {

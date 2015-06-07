@@ -13,12 +13,25 @@ int main()
 {
 
 	RpcClient client("127.0.0.1", 9000);
+	GetFileInfoResponseProto res;
+	client.getFileInfo("/user/hadoop/input.txt", &res);
+	_D("%s", res.fs().owner().c_str());
+	_D("%s", res.fs().group().c_str());
+	_D("%d", res.fs().length());
+	_D("%d", res.fs().filetype());
+	if (res.fs().has_locations()) _D("yes");
+	else _D("no");
+
+	client.read("/user/hadoop/input.txt", NULL, 0);
+
 	GetListingResponseProto rep;
-	client.ls("/", &rep);
-	DeleteResponseProto rr;
-	client.rm("/asd11", &rr);
-	RenameResponseProto rr1;
-	client.mv("/asd1", "/asd11", &rr1);
+	//client.ls("/", &rep);
+	//DeleteResponseProto rr;
+	//client.rm("/asd11", &rr);
+	//RenameResponseProto rr1;
+	//client.mv("/asd1", "/asd11", &rr1);
+	//CreateResponseProto rr2;
+	//_D("%d", client.create("/xx1", &rr2));
 	return 0;
 
 	uuid_t uuid;

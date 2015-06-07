@@ -1,5 +1,5 @@
 #pragma once 
-
+#include <cstdio>
 /*usage:
 * #define LOG
 * #include "Log.h"
