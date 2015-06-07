@@ -120,6 +120,7 @@ void RpcClient::read(const char *path, char *buf, uint32_t size)
 
 		SocketDataChannel channel(host, port);
 		channel.readBlock(length, pool_id, block.b().blockid(), block.b().generationstamp(), offset_in_block, token, false);
+		channel.closeSocket();
 	}
 }
 

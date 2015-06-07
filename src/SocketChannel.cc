@@ -4,7 +4,7 @@
 #include <string>
 #include "google/protobuf/io/coded_stream.h"
 
-#define DEBUG
+#define ERROR
 #include "Log.h"
 
 using namespace native::libhdfs;
@@ -94,4 +94,9 @@ const uint8_t* SocketChannel::readVarint32FromArray(const uint8_t* buffer, uint3
 done:
 	*value = result;
 	return ptr;
+}
+
+void SocketChannel::closeSocket()
+{
+	close(m_sockfd);
 }

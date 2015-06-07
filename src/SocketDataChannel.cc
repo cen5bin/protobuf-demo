@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include "datatransfer.pb.h"
 
-#define DEBUG
+#define INFO
 #include "Log.h"
 
 using namespace native::libhdfs;
@@ -54,9 +54,9 @@ SocketDataChannel::SocketDataChannel(const char *host, const uint32_t port)
 
 void SocketDataChannel::readBlock(const uint64_t length, const char *pool_id, const uint64_t block_id,	const uint64_t generation_stamp, const uint64_t offset, const TokenProto &block_token, bool check_crc)
 {
+	static uint8_t buf[BUFFER_SIZE];
 	this->sendMessage((int16_t)htons(28));
 	this->sendMessage(READ_BLOCK);
-	_D("aaa");
 
 	OpReadBlockProto request;
 	request.set_offset(offset);
@@ -81,7 +81,6 @@ void SocketDataChannel::readBlock(const uint64_t length, const char *pool_id, co
 
 	this->sendProtobufMessageWithLength(&request);
 
-	uint8_t buf[BUFFER_SIZE];
 	int ll = this->receiveMessage(buf, BUFFER_SIZE);
 	_D("%d", ll);
 	uint32_t len;
@@ -100,12 +99,12 @@ void SocketDataChannel::readBlock(const uint64_t length, const char *pool_id, co
 	}
 
 	uint32_t bytes_per_chunk = block_op_response.readopchecksuminfo().checksum().bytesperchecksum();
-	_D("checksumtype %d", checksum_type);
 	_D("bytesperchunk %d", bytes_per_chunk);
 	uint64_t tol_read = 0;
 	if (block_op_response.status() == 0)
 	{
 		_D("tol_read %llu, length %llu", tol_read, length);
+		uint8_t bbb[1000000];
 		while (tol_read < length)
 		{
 			uint32_t packet_len;
@@ -140,20 +139,66 @@ void SocketDataChannel::readBlock(const uint64_t length, const char *pool_id, co
 			int32_t read_len = 0;
 			while (read_len < data_len)
 			{
-				int32_t len = this->receiveMessage(buf, BUFFER_SIZE);
+				int32_t len = this->receiveMessage(bbb + tol_read, BUFFER_SIZE);
 				read_len += len;
 				tol_read += len;
 			}
-
 		}
+		bbb[length] = '\0';
+		puts((char *)bbb);
 	}
 
-	_D("total read %llu", tol_read);
+	_I("total read %llu", tol_read);
 
-	//ll = this->receiveMessage(buf, 1024);
-	//_D("%d", ll);
-	//ll = this->receiveMessage(buf, 1024);
-	//_D("%d", ll);
-	//ll = this->receiveMessage(buf, 1024);
-	//_D("%d", ll);
+	ClientReadStatusProto rs;
+	rs.set_status((Status)0);
+	this->sendProtobufMessageWithLength(&rs);
+}
+
+void SocketDataChannel::writeBlock(const LocatedBlockProto &block, const uint64_t length, const uint64_t offset, const TokenProto &block_token, const uint64_t latestgenerationstamp, const uint64_t minBytesRcvd, const uint64_t maxBytesRcv, const uint32_t pipelinesize, int stage)
+{
+	static uint8_t buf[BUFFER_SIZE];
+	this->sendMessage((int16_t)htons(28));
+	this->sendMessage(WRITE_BLOCK);
+
+	OpWriteBlockProto request;
+	request.set_latestgenerationstamp(latestgenerationstamp);
+	request.set_minbytesrcvd(minBytesRcvd);
+	request.set_maxbytesrcvd(maxBytesRcv);
+	request.set_pipelinesize(pipelinesize);
+	request.set_stage((OpWriteBlockProto_BlockConstructionStage)stage);
+
+	ClientOperationHeaderProto *header = request.mutable_header();
+	header->set_clientname("libhdfs");
+	BaseHeaderProto *baseheader = header->mutable_baseheader();
+	ExtendedBlockProto *eb = baseheader->mutable_block();
+	eb->set_blockid(block.b().blockid());
+	eb->set_generationstamp(block.b().generationstamp());
+	eb->set_numbytes(block.b().numbytes());
+	eb->set_poolid(block.b().poolid());
+	TokenProto *token = baseheader->mutable_token();
+	token->set_identifier(block_token.identifier());
+	token->set_password(block_token.password());
+	token->set_kind(block_token.kind());
+	token->set_service(block_token.service());
+
+	ChecksumProto *cs = request.mutable_requestedchecksum();
+	cs->set_type(CHECKSUM_CRC32);
+	cs->set_bytesperchecksum(4);
+
+	for (int i = 0; i < block.locs_size(); ++i)
+	{
+		DatanodeInfoProto location = block.locs(i);
+		DatanodeInfoProto *ll = request.add_targets();
+		DatanodeIDProto *id = ll->mutable_id();
+		id->set_hostname(location.id().hostname());
+		id->set_infoport(location.id().infoport());
+		id->set_ipaddr(location.id().ipaddr());
+		id->set_ipcport(location.id().ipcport());
+		id->set_datanodeuuid(location.id().datanodeuuid());
+		id->set_xferport(location.id().xferport());
+		ll->set_location(location.location());
+	}
+
+	this->sendProtobufMessageWithLength(&request);
 }

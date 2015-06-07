@@ -16,12 +16,6 @@ int main()
 	GetFileInfoResponseProto res;
 	client.getFileInfo("/bb", &res);
 	//client.getFileInfo("/user/hadoop/input.txt", &res);
-	_D("%s", res.fs().owner().c_str());
-	_D("%s", res.fs().group().c_str());
-	_D("%d", res.fs().length());
-	_D("%d", res.fs().filetype());
-	if (res.fs().has_locations()) _D("yes");
-	else _D("no");
 
 	client.read("/bb", NULL, 0);
 	//client.read("/user/hadoop/input.txt", NULL, 0);

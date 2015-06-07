@@ -10,8 +10,8 @@
 #include "google/protobuf/io/zero_copy_stream.h"
 #include "google/protobuf/io/zero_copy_stream_impl.h"
 
-//#define INFO
-#define DEBUG
+#define INFO
+//#define DEBUG
 #include "Log.h"
 
 using std::string;

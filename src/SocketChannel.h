@@ -14,6 +14,7 @@ namespace native
 			public:
 				~SocketChannel();
 				SocketChannel(){}
+				void closeSocket();
 				
 			protected:
 				int sendMessage(const void *msg, int msg_len) const;
