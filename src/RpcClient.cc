@@ -1,4 +1,6 @@
 #include "RpcClient.h"
+#include "SocketDataChannel.h"
+#include <string>
 
 #define DEBUG
 #include "Log.h"
@@ -96,12 +98,29 @@ int RpcClient::getBlockLocations(const char *path, const HdfsFileStatusProto &fs
 
 void RpcClient::read(const char *path, char *buf, uint32_t size)
 {
-	GetFileInfoResponseProto res;
-	this->getFileInfo(path, &res);
-	GetBlockLocationsResponseProto response;
-	this->getBlockLocations(path, res.fs(), &response);
-	_D("%d", response.locations().blocks_size());
-	_D("%s", response.locations().blocks(0).locs(0).id().ipaddr().c_str());
+	GetFileInfoResponseProto fileInfo;
+	this->getFileInfo(path, &fileInfo);
+	GetBlockLocationsResponseProto blockLocation;
+	this->getBlockLocations(path, fileInfo.fs(), &blockLocation);
+	_D("%d", blockLocation.locations().blocks_size());
+	_D("%s", blockLocation.locations().blocks(0).locs(0).id().ipaddr().c_str());
+
+	if (blockLocation.locations().filelength() == 0) return;	
+	
+	for (int i = 0; i < blockLocation.locations().blocks_size(); ++i)
+	{
+		LocatedBlockProto block = blockLocation.locations().blocks(i);
+		uint64_t length = block.b().numbytes();
+		const char *pool_id = block.b().poolid().c_str();
+		uint64_t offset_in_block = 0;
+		TokenProto token = block.blocktoken();
+		DatanodeInfoProto location = block.locs(0);
+		const char *host = location.id().ipaddr().c_str();
+		uint32_t port = location.id().xferport();
+
+		SocketDataChannel channel(host, port);
+		channel.readBlock(length, pool_id, block.b().blockid(), block.b().generationstamp(), offset_in_block, token, false);
+	}
 }
 
 bool RpcClient::isDir(const HdfsFileStatusProto &fs) const
