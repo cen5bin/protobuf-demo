@@ -32,11 +32,11 @@ int RpcClient::ls(const char *path, GetListingResponseProto *response)
 	return m_controller->status();
 }
 
-int RpcClient::rm(const char *path, DeleteResponseProto *response)
+int RpcClient::rm(const char *path, bool recursive, DeleteResponseProto *response)
 {
 	DeleteRequestProto request;
 	request.set_src(path);
-	request.set_recursive(false);
+	request.set_recursive(recursive);
 	m_client->delete1(m_controller, &request, response, NULL);
 	return m_controller->status();
 }
@@ -50,12 +50,34 @@ int RpcClient::mv(const char *src, const char *dst, RenameResponseProto *respons
 	return m_controller->status();
 }
 
-int RpcClient::mkdir(const char *path, MkdirsResponseProto *response)
+int RpcClient::mkdir(const char *path, int perm, MkdirsResponseProto *response)
 {
 	MkdirsRequestProto request;
-
+	request.set_src(path);
+	request.set_createparent(false);
+	request.mutable_masked()->set_perm(perm);
+	m_client->mkdirs(m_controller, &request, response, NULL);
+	return m_controller->status();
 }
 
+int RpcClient::chmod(const char *path, int mode, SetPermissionResponseProto *response)
+{
+	SetPermissionRequestProto request;
+	request.set_src(path);
+	request.mutable_permission()->set_perm(mode);
+	m_client->setPermission(m_controller, &request, response, NULL);
+	return m_controller->status();
+}
+
+int RpcClient::chown(const char *path, const char *owner, const char *group, SetOwnerResponseProto *response)
+{
+	SetOwnerRequestProto request;
+	request.set_src(path);
+	request.set_username(owner);
+	request.set_groupname(group);
+	m_client->setOwner(m_controller, &request, response, NULL);
+	return m_controller->status();
+}
 
 int RpcClient::create(const char *path, int replication, int blocksize, bool overwrite, CreateResponseProto *response)
 {
@@ -97,6 +119,34 @@ int RpcClient::getBlockLocations(const char *path, const HdfsFileStatusProto &fs
 }
 
 void RpcClient::read(const char *path, char *buf, uint32_t size)
+{
+	GetFileInfoResponseProto fileInfo;
+	this->getFileInfo(path, &fileInfo);
+	GetBlockLocationsResponseProto blockLocation;
+	this->getBlockLocations(path, fileInfo.fs(), &blockLocation);
+	_D("%d", blockLocation.locations().blocks_size());
+	_D("%s", blockLocation.locations().blocks(0).locs(0).id().ipaddr().c_str());
+
+	if (blockLocation.locations().filelength() == 0) return;	
+	
+	for (int i = 0; i < blockLocation.locations().blocks_size(); ++i)
+	{
+		LocatedBlockProto block = blockLocation.locations().blocks(i);
+		uint64_t length = block.b().numbytes();
+		const char *pool_id = block.b().poolid().c_str();
+		uint64_t offset_in_block = 0;
+		TokenProto token = block.blocktoken();
+		DatanodeInfoProto location = block.locs(0);
+		const char *host = location.id().ipaddr().c_str();
+		uint32_t port = location.id().xferport();
+
+		SocketDataChannel channel(host, port);
+		channel.readBlock(length, pool_id, block.b().blockid(), block.b().generationstamp(), offset_in_block, token, false);
+		channel.closeSocket();
+	}
+}
+
+void RpcClient::copyToLocalFile(const char *path, const char *dest)
 {
 	GetFileInfoResponseProto fileInfo;
 	this->getFileInfo(path, &fileInfo);

@@ -6,6 +6,7 @@
 #include "Log.h"
 #include "RpcClient.h"
 #include <uuid/uuid.h>
+#include "FileSystem.h"
 using namespace hadoop::hdfs;
 using namespace native::libhdfs;
 
@@ -14,10 +15,26 @@ int main()
 
 	RpcClient client("127.0.0.1", 9000);
 	GetFileInfoResponseProto res;
-	client.getFileInfo("/bb", &res);
+	//client.getFileInfo("/bb", &res);
 	//client.getFileInfo("/user/hadoop/input.txt", &res);
 
-	client.read("/bb", NULL, 0);
+	//MkdirsResponseProto rr;
+	//client.mkdir("/pp", &rr);
+
+	//SetPermissionResponseProto rr1;
+	//client.chmod("/xx", 0777, &rr1);
+
+	//SetOwnerResponseProto rr2;
+	//client.chown("/xx", "kk", "kk", &rr2);
+
+	FileSystem fs("127.0.0.1", 9000);
+	//fs.rename("/xx1", "/xx2");
+	//fs.mkdir("/asd123");
+	bool xxx = fs.exists("/xx2");
+	if (xxx) _D("exists");
+	else _D("not exists");
+	//fs.remove("/asd123", true);
+	//client.read("/bb", NULL, 0);
 	//client.read("/user/hadoop/input.txt", NULL, 0);
 
 	GetListingResponseProto rep;

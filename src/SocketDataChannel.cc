@@ -12,6 +12,7 @@ using namespace hadoop::hdfs;
 using namespace hadoop::common;
 
 static const uint32_t BUFFER_SIZE = 1024;
+static const uint32_t BLOCK_SIZE = 64 * 1024 * 1024;
 
 //op codes
 static const int8_t WRITE_BLOCK = 80;
@@ -55,6 +56,7 @@ SocketDataChannel::SocketDataChannel(const char *host, const uint32_t port)
 void SocketDataChannel::readBlock(const uint64_t length, const char *pool_id, const uint64_t block_id,	const uint64_t generation_stamp, const uint64_t offset, const TokenProto &block_token, bool check_crc)
 {
 	static uint8_t buf[BUFFER_SIZE];
+	static uint8_t block_buf[BLOCK_SIZE];
 	this->sendMessage((int16_t)htons(28));
 	this->sendMessage(READ_BLOCK);
 
