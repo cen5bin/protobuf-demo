@@ -141,13 +141,20 @@ void RpcClient::read(const char *path, char *buf, uint32_t size)
 		uint32_t port = location.id().xferport();
 
 		SocketDataChannel channel(host, port);
-		channel.readBlock(length, pool_id, block.b().blockid(), block.b().generationstamp(), offset_in_block, token, false);
+		//channel.readBlock(length, pool_id, block.b().blockid(), block.b().generationstamp(), offset_in_block, token, false);
 		channel.closeSocket();
 	}
 }
 
 void RpcClient::copyToLocalFile(const char *path, const char *dest)
 {
+	static uint8_t block_buf[64 * 1024 * 1024];
+	FILE *fp = fopen(dest, "wb");
+	if (fp == NULL)
+	{
+		_E("can't open file %s", dest);
+		return;
+	}
 	GetFileInfoResponseProto fileInfo;
 	this->getFileInfo(path, &fileInfo);
 	GetBlockLocationsResponseProto blockLocation;
@@ -169,9 +176,12 @@ void RpcClient::copyToLocalFile(const char *path, const char *dest)
 		uint32_t port = location.id().xferport();
 
 		SocketDataChannel channel(host, port);
-		channel.readBlock(length, pool_id, block.b().blockid(), block.b().generationstamp(), offset_in_block, token, false);
+		uint64_t data_len = channel.readBlock(length, pool_id, block.b().blockid(), block.b().generationstamp(), offset_in_block, token, false, block_buf);
+		_D("%d", data_len);
+		fwrite(block_buf, data_len, 1, fp);
 		channel.closeSocket();
 	}
+	fclose(fp);
 }
 
 bool RpcClient::isDir(const HdfsFileStatusProto &fs) const

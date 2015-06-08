@@ -61,5 +61,5 @@ bool FileSystem::isFile(const char *path)
 
 void FileSystem::copyToLocalFile(const char *src, const char *dest)
 {
-
+	m_client->copyToLocalFile(src, dest);
 }

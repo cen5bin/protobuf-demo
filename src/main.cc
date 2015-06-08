@@ -13,6 +13,13 @@ using namespace native::libhdfs;
 int main()
 {
 
+	//FILE *fp = fopen("xx", "wb");
+	//if (!fp)
+	//{
+	//	_E("can't open file");
+	//	return -1;
+	//}
+	//return 0;
 	RpcClient client("127.0.0.1", 9000);
 	GetFileInfoResponseProto res;
 	//client.getFileInfo("/bb", &res);
@@ -33,6 +40,9 @@ int main()
 	bool xxx = fs.exists("/xx2");
 	if (xxx) _D("exists");
 	else _D("not exists");
+
+	fs.copyToLocalFile("/bb", "xx");
+	fs.copyToLocalFile("/user/hadoop/input.txt", "xx1");
 	//fs.remove("/asd123", true);
 	//client.read("/bb", NULL, 0);
 	//client.read("/user/hadoop/input.txt", NULL, 0);

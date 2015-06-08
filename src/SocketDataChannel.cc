@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include "datatransfer.pb.h"
 
-#define INFO
+#define DEBUG
 #include "Log.h"
 
 using namespace native::libhdfs;
@@ -53,10 +53,10 @@ SocketDataChannel::SocketDataChannel(const char *host, const uint32_t port)
 	}
 }
 
-void SocketDataChannel::readBlock(const uint64_t length, const char *pool_id, const uint64_t block_id,	const uint64_t generation_stamp, const uint64_t offset, const TokenProto &block_token, bool check_crc)
+uint64_t SocketDataChannel::readBlock(const uint64_t length, const char *pool_id, const uint64_t block_id,	const uint64_t generation_stamp, const uint64_t offset, const TokenProto &block_token, bool check_crc, uint8_t *block_buf)
 {
 	static uint8_t buf[BUFFER_SIZE];
-	static uint8_t block_buf[BLOCK_SIZE];
+	//static uint8_t block_buf[BLOCK_SIZE];
 	this->sendMessage((int16_t)htons(28));
 	this->sendMessage(READ_BLOCK);
 
@@ -106,7 +106,7 @@ void SocketDataChannel::readBlock(const uint64_t length, const char *pool_id, co
 	if (block_op_response.status() == 0)
 	{
 		_D("tol_read %llu, length %llu", tol_read, length);
-		uint8_t bbb[1000000];
+//		uint8_t bbb[1000000];
 		while (tol_read < length)
 		{
 			uint32_t packet_len;
@@ -141,13 +141,13 @@ void SocketDataChannel::readBlock(const uint64_t length, const char *pool_id, co
 			int32_t read_len = 0;
 			while (read_len < data_len)
 			{
-				int32_t len = this->receiveMessage(bbb + tol_read, BUFFER_SIZE);
+				int32_t len = this->receiveMessage(block_buf + tol_read, BUFFER_SIZE);
 				read_len += len;
 				tol_read += len;
 			}
 		}
-		bbb[length] = '\0';
-		puts((char *)bbb);
+//		bbb[length] = '\0';
+//		puts((char *)bbb);
 	}
 
 	_I("total read %llu", tol_read);
@@ -155,6 +155,7 @@ void SocketDataChannel::readBlock(const uint64_t length, const char *pool_id, co
 	ClientReadStatusProto rs;
 	rs.set_status((Status)0);
 	this->sendProtobufMessageWithLength(&rs);
+	return tol_read;
 }
 
 void SocketDataChannel::writeBlock(const LocatedBlockProto &block, const uint64_t length, const uint64_t offset, const TokenProto &block_token, const uint64_t latestgenerationstamp, const uint64_t minBytesRcvd, const uint64_t maxBytesRcv, const uint32_t pipelinesize, int stage)
