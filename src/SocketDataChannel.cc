@@ -204,4 +204,8 @@ void SocketDataChannel::writeBlock(const LocatedBlockProto &block, const uint64_
 	}
 
 	this->sendProtobufMessageWithLength(&request);
+
+	uint8_t buf0[1024];
+	this->receiveMessage(buf0, 1024);
+
 }

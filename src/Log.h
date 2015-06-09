@@ -7,7 +7,7 @@
 */
 
 
-
+#define ERROR
 //------------don't modify anything below--------------------------
 
 #define __COL_END__ "\033[0m"

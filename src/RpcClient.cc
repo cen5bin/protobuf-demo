@@ -118,6 +118,22 @@ int RpcClient::getBlockLocations(const char *path, const HdfsFileStatusProto &fs
 	return m_controller->status();
 }
 
+void RpcClient::write(const char *path)
+{
+	AddBlockRequestProto request;
+	AddBlockResponseProto response;
+	request.set_src(path);
+	request.set_clientname("libhdfs");
+	m_client->addBlock(m_controller, &request, &response, NULL);
+	GetFileInfoResponseProto fileInfo;
+	this->getFileInfo(path, &fileInfo);
+	GetBlockLocationsResponseProto blockLocation;
+	this->getBlockLocations(path, fileInfo.fs(), &blockLocation);
+	_D("%d", blockLocation.locations().blocks_size());
+	//LocatedBlockProto block = blockLocation.locations().blocks(0);
+	
+}
+
 void RpcClient::read(const char *path, char *buf, uint32_t size)
 {
 	GetFileInfoResponseProto fileInfo;

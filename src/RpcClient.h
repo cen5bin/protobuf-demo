@@ -40,6 +40,10 @@ namespace native
 				void read(const char *path, char *buf, uint32_t size);
 
 				void copyToLocalFile(const char *src, const char *dest);
+
+
+				void write(const char *path);
+
 			private:
 
 				//int getBlockLocation(const char *path, )
