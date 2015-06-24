@@ -1,4 +1,4 @@
-TARGET = run.out
+TARGET = libhdfs.so
 
 CXX = g++
 CPPFLAGS = -g \
@@ -16,11 +16,11 @@ SOURCE = $(foreach d, $(EXT), $(notdir $(wildcard $(SRC_DIR)/*.$(d))))
 OBJS = $(foreach src, $(basename $(SOURCE)), $(OBJ_DIR)/$(src).o)
 PROTO_DIR = ./protos
 
-
 edit: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CXX) $^ $(LDFLAGS) -o $@
+	$(CXX) -fPIC -shared $^ $(LDFLAGS) -o $@
+	cp $@ test/
 	@echo "done"
 
 $(OBJ_DIR)/%.d : $(SRC_DIR)/%.cpp
@@ -35,11 +35,15 @@ $(OBJ_DIR)/%.d : $(SRC_DIR)/%.cc
 	$(CXX) -MM $(CPPFLAGS) $< >> $@; \
 	echo "\t" $(CXX) -c $(CPPFLAGS) $< -o $(@:.d=.o) $(LDFLAG) >> $@
 
+
+
+ifneq ($(MAKECMDGOALS), clean)
 -include $(OBJS:.o=.d)
+endif
 
 .PHONY: clean all
 clean:
-	rm -rf $(OBJS) $(OBJ_DIR)/*.d run
+	rm -rf $(OBJ_DIR)/*.o $(OBJ_DIR)/*.d run
 
 cleanall:
 	make clean
